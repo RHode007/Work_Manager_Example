@@ -15,7 +15,8 @@ data class PhoneNumber(
 @Entity
 data class User(
     @PrimaryKey val id: Int,
-    @ColumnInfo(name = "api") val api: String?,
+    @ColumnInfo(name = "api") val api: String? = "",
+    @ColumnInfo(name = "defaultText") val defaultText: String? = "",
     @ColumnInfo(name = "debugAccess") val debugAccess: Int = 0,
     @ColumnInfo(name = "logging") val logging: Int = 0,
 )
@@ -56,20 +57,23 @@ interface UserDao {
     @Query("SELECT * FROM user")
     fun getAll(): List<User>
 
+    @Query("SELECT api FROM user LIMIT 1")
+    fun getApi(): String
+
+    @Query("SELECT * FROM user WHERE id = :id")
+    fun getById(id: Int): User
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(vararg user: User)
+
+    @Query("UPDATE user SET defaultText = :defaultText WHERE id = :id")
+    fun updateDefaultText(id: Int, defaultText: String)
 
     @Query("UPDATE user SET debugAccess = :debugAccess WHERE id = :id")
     fun updateDebugAccess(id: Int, debugAccess: Int): Int
 
     @Query("UPDATE user SET logging = :logging WHERE id = :id")
     fun updateLogging(id: Int, logging: Int): Int
-
-    @Query("SELECT api FROM user LIMIT 1")
-    fun getApi(): String
-
-    @Query("SELECT * FROM user WHERE id = :id")
-    fun getById(id: Int): User
 
     @Delete
     fun delete(user: User)

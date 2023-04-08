@@ -57,11 +57,10 @@ class DownloadWorker(val context: Context, workerParameters: WorkerParameters) :
 
     override fun doWork(): Result {
         val phoneNumber = db.phoneNumberDao()
-        val loggerDao = db.loggerDao()
-        val apiKey = db.userDao().getApi()
+        val user = db.userDao().getById(0)
         if (isInternetAvailable()) {
         val requestGetList = Request.Builder()
-            .url("https://api.avtomagen.ru/sms/index.php?api=$apiKey")
+            .url("https://api.avtomagen.ru/sms/index.php?api=${user.api}")
             .build()
         client.newCall(requestGetList).execute().use { responseGetList ->
             val responseJsonString = responseGetList.body!!.string()
@@ -76,14 +75,14 @@ class DownloadWorker(val context: Context, workerParameters: WorkerParameters) :
             val mutableGist = gist.toMutableList()
             val phoneNumbersList: List<PhoneNumber> = phoneNumber.getAll()
 //                println("from local db $phoneNumbersList")
-            loggerDao.insertAll(Logger(text = "from remote db $mutableGist"))
-            loggerDao.insertAll(Logger(text = "from local db $phoneNumbersList"))
+            log("from remote db $mutableGist")
+            log("from local db $phoneNumbersList")
             for (itemLocal in phoneNumbersList) {
                 gist.forEachIndexed { _, itemRemote ->
                     if ((itemLocal.id == itemRemote.id)) {
 //                            println(itemRemote.number_tel)
                         sendStatusToServer(
-                            apiKey,
+                            user.api!!,
                             itemLocal.id,
                             itemLocal.status!!,
                             itemLocal.number,
@@ -93,7 +92,7 @@ class DownloadWorker(val context: Context, workerParameters: WorkerParameters) :
                         mutableGist.remove(itemRemote)
                     }
                     if ((itemLocal.id == itemRemote.id) && (itemLocal.status!! == "pending")){
-                        loggerDao.insertAll(Logger(text = "!!anomaly skipped $itemRemote"))
+                        log("!!anomaly skipped $itemRemote")
                         mutableGist.remove(itemRemote)
                     }
                 }
@@ -101,7 +100,7 @@ class DownloadWorker(val context: Context, workerParameters: WorkerParameters) :
             if (mutableGist.isEmpty()) return Result.success()
 
 //            println("from remote after local $mutableGist")
-            loggerDao.insertAll(Logger(text = "from remote after local $mutableGist"))
+            log("from remote after local $mutableGist")
             responseGetList.body!!.close()
             val smsStatusListener = object : BroadcastReceiver() {
                 override fun onReceive(context: Context?, intent: Intent?) {
@@ -112,9 +111,9 @@ class DownloadWorker(val context: Context, workerParameters: WorkerParameters) :
                     when (resultCode) {
                         Activity.RESULT_OK -> {
 //                            println("SMS sent successfully.")
-                            db.loggerDao().insertAll(Logger(text = "SMS sent successfully."))
+                            log("SMS sent successfully.")
                             sendStatusToServer(
-                                apiKey,
+                                user.api!!,
                                 intent?.getIntExtra("id", 0) ?: 0,
                                 "true",
                                 intent?.getStringExtra("phoneNumber"),
@@ -127,9 +126,9 @@ class DownloadWorker(val context: Context, workerParameters: WorkerParameters) :
                         }
                         Activity.RESULT_CANCELED -> {
 //                            println("SMS failed to send.")
-                            db.loggerDao().insertAll(Logger(text = "SMS failed to send."))
+                            log("SMS failed to send.")
                             sendStatusToServer(
-                                apiKey,
+                                user.api!!,
                                 intent?.getIntExtra("id", 0) ?: 0,
                                 "false",
                                 intent?.getStringExtra("phoneNumber"),
@@ -142,9 +141,9 @@ class DownloadWorker(val context: Context, workerParameters: WorkerParameters) :
                         }
                         SmsManager.RESULT_ERROR_NO_SERVICE -> {
 //                            println("RESULT_ERROR_NO_SERVICE.")
-                            db.loggerDao().insertAll(Logger(text = "RESULT_ERROR_NO_SERVICE"))
+                            log("RESULT_ERROR_NO_SERVICE")
                             sendStatusToServer(
-                                apiKey,
+                                user.api!!,
                                 intent?.getIntExtra("id", 0) ?: 0,
                                 "false",
                                 intent?.getStringExtra("phoneNumber"),
@@ -157,9 +156,9 @@ class DownloadWorker(val context: Context, workerParameters: WorkerParameters) :
                         }
                         SmsManager.RESULT_NETWORK_REJECT -> {
 //                            println("RESULT_NETWORK_REJECT.")
-                            db.loggerDao().insertAll(Logger(text = "RESULT_NETWORK_REJECT"))
+                            log("RESULT_NETWORK_REJECT")
                             sendStatusToServer(
-                                apiKey,
+                                user.api!!,
                                 intent?.getIntExtra("id", 0) ?: 0,
                                 "false",
                                 intent?.getStringExtra("phoneNumber"),
@@ -172,9 +171,9 @@ class DownloadWorker(val context: Context, workerParameters: WorkerParameters) :
                         }
                         else ->{
 //                            println("some shit happened, unhandled sms response $resultCode.")
-                            db.loggerDao().insertAll(Logger(text = "some shit happened, unhandled sms response $resultCode"))
+                            log("some shit happened, unhandled sms response $resultCode")
                             sendStatusToServer(
-                                apiKey,
+                                user.api!!,
                                 intent?.getIntExtra("id", 0) ?: 0,
                                 "false",
                                 intent?.getStringExtra("phoneNumber"),
@@ -193,7 +192,7 @@ class DownloadWorker(val context: Context, workerParameters: WorkerParameters) :
                 sendSMS(
                     item.id!!,
                     "+" + item.number_tel!!,
-                    "Ваш заказ готов к выдаче. Работаем с 8 до 16. Автомагазин"
+                    user.defaultText!!
                 )
             }
         }
@@ -206,7 +205,7 @@ class DownloadWorker(val context: Context, workerParameters: WorkerParameters) :
             .build()
         return Result.success(outputData)
         }
-        db.loggerDao().insertAll(Logger(text = "no internet"))
+        log("no internet")
         db.close()
         val outputData = Data.Builder()
             .putString("user_data", "no internet")
@@ -214,12 +213,9 @@ class DownloadWorker(val context: Context, workerParameters: WorkerParameters) :
         return Result.failure(outputData)
     }
 
-    private fun log(inputString: String): String {
-        return if (inputString.startsWith("+")) {
-            inputString.substring(1)
-        } else {
-            inputString
-        }
+    private fun log(text: String) {
+        if (db.userDao().getById(0).logging == 1)
+            db.loggerDao().insertAll(Logger(text = text))
     }
 
     private fun removePlus(inputString: String): String {
@@ -301,7 +297,7 @@ class DownloadWorker(val context: Context, workerParameters: WorkerParameters) :
                     applicationContext,
                     AppDatabase::class.java, "AvtoDB"
                 ).allowMainThreadQueries().build()
-                db.loggerDao().insertAll(Logger(text = "failure sendStatusToServer. $id"))
+                log("failure sendStatusToServer. $id")
                 db.phoneNumberDao().insertAll(PhoneNumber(id!!, status, number, text))
                 db.close()
             }
@@ -316,7 +312,7 @@ class DownloadWorker(val context: Context, workerParameters: WorkerParameters) :
                     applicationContext,
                     AppDatabase::class.java, "AvtoDB"
                 ).allowMainThreadQueries().build()
-                db.loggerDao().insertAll(Logger(text = "success sendStatusToServer. $id"))
+                log("success sendStatusToServer. $id")
                 response.body?.close()
                 db.close()
             }

@@ -23,7 +23,7 @@
             app:layout_constraintVertical_bias="0.05" />
 
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/textInputLayout"
+            android:id="@+id/editApiKeyLayout"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_margin="@dimen/padding_15"
@@ -32,7 +32,7 @@
             app:layout_constraintTop_toBottomOf="@id/textViewTitle">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/editTextUserComment"
+                android:id="@+id/editApiKeyField"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/hintApi"/>
@@ -46,10 +46,10 @@
             android:text="@string/saveApiButton"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/textInputLayout" />
+            app:layout_constraintTop_toBottomOf="@id/editApiKeyLayout" />
 
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/textInputLayout2"
+            android:id="@+id/editSmsTextLayout"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_margin="@dimen/padding_15"
@@ -58,20 +58,21 @@
             app:layout_constraintTop_toBottomOf="@+id/buttonSaveApi">
 
             <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editSmsTextField"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/hintSendText" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <Button
-            android:id="@+id/button"
+            android:id="@+id/buttonSaveSmsText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/saveTextButton"
             android:layout_marginTop="@dimen/padding_15"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/textInputLayout2" />
+            app:layout_constraintTop_toBottomOf="@+id/editSmsTextLayout" />
 
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/startDownloadWorker"

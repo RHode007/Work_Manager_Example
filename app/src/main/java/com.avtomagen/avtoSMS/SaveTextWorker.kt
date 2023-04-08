@@ -6,12 +6,12 @@ import androidx.work.Data
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.avtomagen.avtoSMS.MainActivity.Companion.KEY_API_INPUT_MODE_TEXT
-import com.avtomagen.avtoSMS.MainActivity.Companion.KEY_API_INPUT_USER_TEXT
+import com.avtomagen.avtoSMS.MainActivity.Companion.KEY_DEFAULT_TEXT_INPUT_USER_TEXT
 
-class SaveApiWorker(val context: Context, workerParameters: WorkerParameters) : Worker(context, workerParameters) {
+class SaveTextWorker(val context: Context, workerParameters: WorkerParameters) : Worker(context, workerParameters) {
 
     companion object {
-        const val KEY_API_WORKER_RESULT = "key.api_key.result"
+        const val KEY_DEFAULT_TEXT_WORKER_RESULT = "key.api_key.result"
     }
 
     override fun doWork(): Result {
@@ -20,22 +20,22 @@ class SaveApiWorker(val context: Context, workerParameters: WorkerParameters) : 
             AppDatabase::class.java, "AvtoDB"
         ).allowMainThreadQueries().build()
         when (inputData.getString(KEY_API_INPUT_MODE_TEXT)){
-            "setApi" -> {
-                db.userDao().insertAll(User(0, inputData.getString(KEY_API_INPUT_USER_TEXT)))
-                log(db,"Key set ${inputData.getString(KEY_API_INPUT_USER_TEXT)!!.take(5)}")
+            "setDefaultText" -> {
+                db.userDao().updateDefaultText(0, inputData.getString(KEY_DEFAULT_TEXT_INPUT_USER_TEXT)!!)
+                log(db,"Key set ${inputData.getString(KEY_DEFAULT_TEXT_INPUT_USER_TEXT)!!.take(5)}")
                 db.close()
                 val outputData = Data.Builder()
-                    .putString(KEY_API_WORKER_RESULT, "Ключ ${
-                        inputData.getString(KEY_API_INPUT_USER_TEXT)!!.take(5)} предоставлен")
+                    .putString(KEY_DEFAULT_TEXT_WORKER_RESULT, "Ключ ${
+                        inputData.getString(KEY_DEFAULT_TEXT_INPUT_USER_TEXT)!!.take(5)} предоставлен")
                     .build()
                 return Result.success(outputData)
             }
-            "getApiStatus" ->{
-                var c: String? = db.userDao().getApi()
-                c = if(c.isNullOrEmpty()) "Ключ не предоставлен" else "Ключ ${c.take(5)} предоставлен"
+            "getDefaultText" ->{
+                var c: String? = db.userDao().getById(0)?.defaultText
+                c = if(c.isNullOrEmpty()) "Текст не предоставлен" else "$c"
                 db.close()
                 val outputData = Data.Builder()
-                    .putString(KEY_API_WORKER_RESULT, c)
+                    .putString(KEY_DEFAULT_TEXT_WORKER_RESULT, c)
                     .build()
                 return Result.success(outputData)
             }

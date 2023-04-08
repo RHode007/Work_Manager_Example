@@ -21,8 +21,8 @@ import androidx.databinding.DataBindingUtil
 import androidx.room.Room
 import androidx.work.*
 import com.avtomagen.avtoSMS.SaveApiWorker.Companion.KEY_API_WORKER_RESULT
+import com.avtomagen.avtoSMS.SaveTextWorker.Companion.KEY_DEFAULT_TEXT_WORKER_RESULT
 import com.avtomagen.avtoSMS.databinding.ActivityMainBinding
-import com.avtomagen.avtoSMS.databinding.DebugBinding
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
@@ -33,11 +33,13 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val KEY_API_INPUT_USER_TEXT = "key.api_input_user.text"
+        const val KEY_DEFAULT_TEXT_INPUT_USER_TEXT = "key.api_input_user.text"
         const val KEY_SMS_NOTIFICATION_TITLE = "key.sms_notification.title"
         const val KEY_SMS_NOTIFICATION_DESC = "key.sms_notification.desc"
         const val KEY_UPLOAD_TITLE = "key.upload.title"
         const val KEY_UPLOAD_DESC = "key.upload.desc"
         const val KEY_API_INPUT_MODE_TEXT = "key.api_input_mode.text"
+        const val KEY_DEFAULT_TEXT_INPUT_MODE_TEXT = "key.api_input_mode.text"
         const val TAG_SEND_SMS = "tag.send.sms"
         const val CHANNEL_ID = "4747"
     }
@@ -51,11 +53,17 @@ class MainActivity : AppCompatActivity() {
         createNotificationChannel()
 
         bindingMainActivity.buttonSaveApi.setOnClickListener {
-            val userText = bindingMainActivity.editTextUserComment.text?.toString() ?: ""
-            if (userText == "1234") enableDebugAccess(0)
-            else setApiKey(userText)
+            val apiKeyText = bindingMainActivity.editApiKeyField.text?.toString() ?: ""
+            if (apiKeyText == "1234") enableDebugAccess(0)
+            else setApiKey(apiKeyText)
         }
         getApikey()
+
+        bindingMainActivity.buttonSaveSmsText.setOnClickListener {
+            val userText = bindingMainActivity.editSmsTextField.text?.toString() ?: ""
+            setDefaultText(userText)
+        }
+        getDefaultText()
 
         val list = WorkManager.getInstance(this).getWorkInfosByTag(TAG_SEND_SMS).get().filter {
             it.state == WorkInfo.State.ENQUEUED
@@ -93,6 +101,48 @@ class MainActivity : AppCompatActivity() {
         permissionBattery()
     }
 
+    private fun getDefaultText(){
+        val workManager = WorkManager.getInstance(this)
+
+        val data = Data.Builder()
+            .putString(KEY_DEFAULT_TEXT_INPUT_MODE_TEXT, "getDefaultText")
+            .build()
+        val saveTextWorker = OneTimeWorkRequestBuilder<SaveTextWorker>()
+            .setInputData(data)
+            .build()
+
+        workManager.enqueue(saveTextWorker)
+
+        workManager.getWorkInfoByIdLiveData(saveTextWorker.id)
+            .observe(this) { workInfo ->
+                if (workInfo.state == WorkInfo.State.SUCCEEDED) {
+                    bindingMainActivity.editSmsTextLayout.hint = workInfo.outputData.getString(KEY_DEFAULT_TEXT_WORKER_RESULT)
+                }
+            }
+    }
+
+    private fun setDefaultText(userText: String) {
+        val workManager = WorkManager.getInstance(this)
+
+        val data = Data.Builder()
+            .putString(KEY_DEFAULT_TEXT_INPUT_MODE_TEXT, "setDefaultText")
+            .putString(KEY_DEFAULT_TEXT_INPUT_USER_TEXT, userText)
+            .build()
+        val saveTextWorker = OneTimeWorkRequestBuilder<SaveTextWorker>()
+            .setInputData(data)
+            .build()
+
+        workManager.enqueue(saveTextWorker)
+
+        workManager.getWorkInfoByIdLiveData(saveTextWorker.id)
+            .observe(this) { workInfo ->
+                if (workInfo.state == WorkInfo.State.SUCCEEDED) {
+                    bindingMainActivity.textViewWorkState.text = "Текст установлен"
+                    bindingMainActivity.editSmsTextLayout.hint = workInfo.outputData.getString(KEY_DEFAULT_TEXT_WORKER_RESULT)
+                }
+            }
+    }
+
     private fun getApikey(){
         val workManager = WorkManager.getInstance(this)
 
@@ -108,7 +158,7 @@ class MainActivity : AppCompatActivity() {
         workManager.getWorkInfoByIdLiveData(saveApiWorker.id)
             .observe(this) { workInfo ->
                 if (workInfo.state == WorkInfo.State.SUCCEEDED) {
-                    bindingMainActivity.textInputLayout.hint = workInfo.outputData.getString(KEY_API_WORKER_RESULT)
+                    bindingMainActivity.editApiKeyLayout.hint = workInfo.outputData.getString(KEY_API_WORKER_RESULT)
                 }
             }
     }
@@ -130,7 +180,7 @@ class MainActivity : AppCompatActivity() {
             .observe(this) { workInfo ->
                 if (workInfo.state == WorkInfo.State.SUCCEEDED) {
                     bindingMainActivity.textViewWorkState.text = "Ключ установлен"
-                    bindingMainActivity.textInputLayout.hint = workInfo.outputData.getString(KEY_API_WORKER_RESULT)
+                    bindingMainActivity.editApiKeyLayout.hint = workInfo.outputData.getString(KEY_API_WORKER_RESULT)
                 }
             }
     }
@@ -150,8 +200,7 @@ class MainActivity : AppCompatActivity() {
             applicationContext,
             AppDatabase::class.java, "AvtoDB"
         ).allowMainThreadQueries().build()
-        val user = db.userDao().getById(0)
-        if(user.debugAccess == 1) bindingMainActivity.buttonDebug.visibility = View.VISIBLE
+        if(db.userDao().getById(id)?.debugAccess == 1) bindingMainActivity.buttonDebug.visibility = View.VISIBLE
         db.close()
     }
 
@@ -188,7 +237,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun goToDebug(view: View?) {
-        val intent = Intent(this, DebugActivity::class.java)
+        val intent = Intent(this@MainActivity, DebugActivity::class.java)
         startActivity(intent)
     }
 
