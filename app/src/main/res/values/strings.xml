@@ -1,9 +1,15 @@
 <resources>
-    <string name="app_name">Work Manager Example</string>
-    <string name="channel_name">worker_channel</string>
-    <string name="channel_description">worker_channel_description</string>
-    <string name="write_any_text">Write any text comment to App</string>
-    <string name="emotion_analysis">Emotion Analysis</string>
-    <string name="send_logs">Send Logs Periodically</string>
-    <string name="state">State</string>
+    <string name="app_name">SMS sender</string>
+    <string name="channel_name">Статусы смс</string>
+    <string name="channel_description">Тут будут отправленные смс</string>
+    <string name="hintApi">Апи ключ</string>
+    <string name="saveApiButton">Сохранить ключ</string>
+    <string name="app_toggle">Запуск</string>
+    <string name="state">Состояние</string>
+    <string name="updateLogger">Обновить лог</string>
+    <string name="clearDB">Очистить</string>
+    <string name="returnButton">Назад</string>
+    <string name="openDebug">Отладка</string>
+    <string name="hintSendText">Текст для отправки</string>
+    <string name="saveTextButton">Сохранить текст</string>
 </resources>
